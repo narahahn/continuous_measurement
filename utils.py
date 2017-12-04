@@ -235,7 +235,7 @@ def barycentric_lagrint(ti, yi, t):
             w /= np.sum(w)
 
             y[k] = np.dot(w, yi[idx])
-    elif N%2==1:
+    elif N % 2==1:
         Nhalf = int((N-1)/2)
         for k, tk in enumerate(t):
             n0 = np.argmin(np.abs(ti - tk))
@@ -384,6 +384,22 @@ def fractional_delay(delay, Lf, fs, type):
             waveform[n, :] = htemp
             shift[n] = ni
             offset[n] = n0
+    elif type == 'fast_lagr':
+        d = delay * fs
+        if Lf % 2 == 0:
+            n0 = np.ceil(d).astype(int)
+            Lh = Lf/2
+        elif Lf % 2 == 1:
+            n0 = np.round(d).astype(int)
+            Lh = (np.floor(Lf/2)).astype(int)
+        idx_matrix = n0[:, np.newaxis] + np.arange(-Lh, -Lh+Lf)[np.newaxis, :]
+        offset = n0
+        shift = n0 - Lh
+        
+        ii = np.arange(Lf)
+        w = comb(Lf-1, ii) * (-1)**ii
+        waveform = w[np.newaxis, :] / (d[:, np.newaxis] - idx_matrix)
+        waveform /= np.sum(waveform, axis=-1)[:, np.newaxis]
     else:
         print('unknown type')
     return waveform, shift, offset

@@ -44,33 +44,66 @@ Omega_al = c / N / R  # anti-aliasing angular speed
 # Captured signal
 delay = distance / c
 weight = 1/4/np.pi/distance
-waveform, shift, offset = fractional_delay(delay, Lf, fs=fs, type='lagrange')
+waveform, shift, offset = fractional_delay(delay, Lf, fs=fs, type='fast_lagr')
 s = captured_signal(waveform*weight[:, np.newaxis], shift, p)
 
 # The desired impulse responses at selected angles
-phi_k = np.linspace(0, 2 * np.pi, num=K, endpoint=False)
+phi_k = np.linspace(0, 2 * np.pi, num=K, endpoint=False) + 10e-2
 distance_k = np.sqrt((R*np.cos(phi_k)-xs[0])**2 + (R*np.sin(phi_k)-xs[1])**2)
 delay_k = distance_k / c
 weight_k = 1/4/np.pi/distance_k
-waveform_k, shift_k, offset_k = fractional_delay(delay_k, Lf, fs=fs, type='lagrange')
+waveform_k, shift_k, offset_k = fractional_delay(delay_k, Lf, fs=fs, type='fast_lagr')
 h0, _, _ = construct_ir_matrix(waveform_k*weight_k[:, np.newaxis], shift_k, N)
 
 # System identification
 hhat = np.zeros((K, N))
+yhat = np.zeros((K, N))
+dphi = 2 * np.pi / L * N
+n_phi = phi / dphi
+n_phik = phi_k / dphi
+L_int = int_order + 1
+
+# Barycentric form
+ii = np.arange(L_int)
+w = comb(L_int-1, ii) * (-1)**ii
+
+for n in range(N):
+    if L_int % 2 == 0:
+        n0 = np.ceil(n_phik - n/N).astype(int)
+        Lh = L_int/2
+    elif L_int % 2 == 1:
+        n0 = np.round(n_phik - n/N).astype(int)
+        Lh = (np.floor(L_int/2)).astype(int)
+    idx_matrix = n0[:, np.newaxis] + (np.arange(-Lh, -Lh+L_int))[np.newaxis, :]
+    offset = n0
+    shift = n0 - Lh
+    waveform = w[np.newaxis, :] / (n_phik[:, np.newaxis] - n/N - idx_matrix)
+    waveform /= np.sum(waveform, axis=-1)[:, np.newaxis]
+    s_n = s[n::N]
+    for k in range(K):
+        idx = np.arange(shift[k], shift[k]+L_int).astype(int)
+        yhat[k, n] = np.dot(s_n[np.mod(idx, int(L/N))], waveform[k, :])
+
 for k in range(K):
-    y = np.zeros(N)
-    for n in range(N):
-        phitemp = np.mod(phi[n::N], 2*np.pi)
-        sm = s[n::N]
-        idx_sort = np.argsort(phitemp)
-        phitemp = phitemp[idx_sort]
-        sm = sm[idx_sort]
+    hhat[k, :] = cxcorr(yhat[k, :], p)
 
-        phitemp = np.concatenate([phitemp-2*np.pi, phitemp, phitemp+2*np.pi])
-        sm = np.concatenate([sm, sm, sm])
 
-        y[n] = fdfilter(phitemp, sm, phi_k[k], order=int_order)
-    hhat[k, :] = cxcorr(y, p)
+# System identification
+#hhat = np.zeros((K, N))
+#for k in range(K):
+#    y = np.zeros(N)
+#    for n in range(N):
+#        phitemp = np.mod(phi[n::N], 2*np.pi)
+#        sm = s[n::N]
+#        idx_sort = np.argsort(phitemp)
+#        phitemp = phitemp[idx_sort]
+#        sm = sm[idx_sort]
+#
+#        phitemp = np.concatenate([phitemp-2*np.pi, phitemp, phitemp+2*np.pi])
+#        sm = np.concatenate([sm, sm, sm])
+#
+#        y[n] = fdfilter(phitemp, sm, phi_k[k], order=int_order)
+#    hhat[k, :] = cxcorr(y, p)
 
 
 # Plots
