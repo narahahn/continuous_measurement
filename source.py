@@ -60,17 +60,25 @@ def impulse_response(xs, x, sourcetype, fs, oversample=2, c=343):
         Position of the main peak [sample]
     """
     delay, weight = greens_point(xs, x, c)
-    Lf = 21
+    Lf = 23
     f = fir_minmax(fs, oversample)
     waveform_up, shift_up, offset_up = fractional_delay(delay, Lf, fs=oversample*fs, type='fast_lagr')
     waveform_up = fftconvolve(f[np.newaxis, :], waveform_up)
-    for n in range(len(shift)):
-        n0 = shift[n] % oversample
-        shift[n] = (shift[n] - n0) / oversample
-        waveform = np.stack((waveform, fftconvolve(f, waveform_up)[n0::oversample]))
-    n0 = shift_up % oversample
-    shift = ((shift_up - n0) / oversample).astype(int)
-    offset = ((offset_up - n0) / oversample).astype(int)
+    
+#    htemp, _, _ = construct_ir_matrix(waveform_up, shift_up, N*Q)
+    
+    shift = shift_up // oversample
+    res = shift_up % oversample
+    offset = offset_up // oversample
+    
+    waveform = np.append(np.zeros(res[0]), waveform_up[0, :])[::oversample]
+    for n in range(1, len(shift)):
+        waveform_temp = np.append(np.zeros(res[n]), waveform_up[n, :])[::oversample]
+        waveform = np.column_stack((waveform, waveform_temp))
+    waveform = waveform.T
+#    n0 = shift_up % oversample
+#    shift = ((shift_up - n0) / oversample).astype(int)
+#    offset = ((offset_up - n0) / oversample).astype(int)
 #    waveform = fftconvolve(f[np.newaxis, :], waveform)[:, ::2]
 #    shift -= int((len(f)-1)/2)
 #    offset -= int((len(f)-1)/2)
