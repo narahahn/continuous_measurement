@@ -11,22 +11,23 @@ import scipy.signal as signal
 from sys import path
 path.append('../')
 from utils import *
+from source import *
 
 # Constants
 c = 343
-fs = 44100
+fs = 32000
 
 # Source
-xs = [0, 2]  # Point source
+xs = [0, 2, 0]  # Point source
 source_type = 'point'
 
 # Receiver
 R = 0.5
 
 # Experimental parameters
-N = 4410  # FIR filter length
+N = 1600  # FIR filter length
 K = 720  # number of target angles
-Lf = 25  # fractional delay filter length
+Lf = 24  # fractional delay filter length
 
 # oversampling 
 Q = 2  # oversampling factor
@@ -34,9 +35,8 @@ fpass = fs/2 * 0.8
 fstop = fs/2 * 1.0
 att = -130
 order = Q * 40
-#f = fir_linph_ls(fpass, fstop, att, order, Q*fs, density=40)
-f = sig.remez(2*order+1, [0, fpass, fstop, Q*fs/2], [1, 10**((att)/20)], weight=[1, 10e5], fs=Q*fs)
 if Q != 1:
+    f = sig.remez(2*order+1, [0, fpass, fstop, Q*fs/2], [1, 10**((att)/20)], weight=[1, 10e5], fs=Q*fs)
     w, F = signal.freqz(f)
     plt.figure()
     plt.plot(w/2/np.pi*fs*Q, db(F))
@@ -45,17 +45,12 @@ if Q != 1:
     plt.figure()
     plt.plot(f)
 
-# The desired impulse responses at selected angles
+# The impulse responses at selected angles
 phi_k = np.linspace(0, 2 * np.pi, num=K, endpoint=False)
-distance_k = np.sqrt((R*np.cos(phi_k)-xs[0])**2 + (R*np.sin(phi_k)-xs[1])**2)
-delay_k = distance_k / c
-weight_k = 1/4/np.pi/distance_k
-waveform_k, shift_k, offset_k = fractional_delay(delay_k, Lf, fs=Q*fs, type='lagrange')
-if Q != 1:
-    hup, _, _ = construct_ir_matrix(waveform_k*weight_k[:, np.newaxis], shift_k, Q*N)
-    h0 = signal.resample_poly(hup, 1, Q, axis=-1, window=f) * Q
-else:
-    h0, _, _ = construct_ir_matrix(waveform_k*weight_k[:, np.newaxis], shift_k, Q*N)
+x_k = [R*np.cos(phi_k), R*np.sin(phi_k), np.zeros_like(phi_k)]
+waveform_k, shift_k, offset_k = impulse_response(xs, x_k, 'point', fs, oversample=2, c=343)
+h0, _, _ = construct_ir_matrix(waveform_k, shift_k, N)
+    
 
 # Plots
 nn = np.random.randint(0, K+1)

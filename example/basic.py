@@ -17,41 +17,46 @@ c = 343
 fs = 16000
 
 # Source
-xs = [0, 2]  # Point source
+xs = [0, 2, 0]  # Point source
 source_type = 'point'
 
 # Receiver
 R = 0.5
-Omega = 2 * np.pi / 16
+Omega = 2 * np.pi / 20
 L = int(2 * np.pi / Omega * fs)
 t = (1/fs) * np.arange(L)
 phi0 = 0
 phi = Omega * t + phi0
-xm = [R*np.cos(phi), R*np.sin(phi)]
-distance = np.sqrt((xm[0]-xs[0])**2 + (xm[1]-xs[1])**2)
+xm = [R*np.cos(phi), R*np.sin(phi), np.zeros_like(phi)]
+#distance = np.sqrt((xm[0]-xs[0])**2 + (xm[1]-xs[1])**2)
+
+
 
 # Excitation
-N = 800  # excitation period
+N = 1600  # excitation period
 p = perfect_sequence_randomphase(N)
 #p = perfect_sweep(N)
 
 # Experimental parameters
-K = 360  # number of target angles
+K = 320  # number of target angles
 Lf = 21  # fractional delay filter length
-int_order = 3  # spatial interpolation order
+int_order = 20  # spatial interpolation order
 Omega_al = c / N / R  # anti-aliasing angular speed
 
 # Captured signal
-delay = distance / c
-weight = 1/4/np.pi/distance
+#delay = distance / c
+#weight = 1/4/np.pi/distance
+delay, weight = point(xs, xm)
 waveform, shift, offset = fractional_delay(delay, Lf, fs=fs, type='fast_lagr')
 s = captured_signal(waveform*weight[:, np.newaxis], shift, p)
 
 # The desired impulse responses at selected angles
 phi_k = np.linspace(0, 2 * np.pi, num=K, endpoint=False) + 10e-2
-distance_k = np.sqrt((R*np.cos(phi_k)-xs[0])**2 + (R*np.sin(phi_k)-xs[1])**2)
-delay_k = distance_k / c
-weight_k = 1/4/np.pi/distance_k
+#distance_k = np.sqrt((R*np.cos(phi_k)-xs[0])**2 + (R*np.sin(phi_k)-xs[1])**2)
+x_k = [R*np.cos(phi_k), R*np.sin(phi_k), np.zeros_like(phi_k)]
+#delay_k = distance_k / c
+delay_k, weight_k = point(xs, x_k)
+#weight_k = 1/4/np.pi/distance_k
 waveform_k, shift_k, offset_k = fractional_delay(delay_k, Lf, fs=fs, type='fast_lagr')
 h0, _, _ = construct_ir_matrix(waveform_k*weight_k[:, np.newaxis], shift_k, N)
 
