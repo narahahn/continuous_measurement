@@ -1,3 +1,4 @@
+"""Compute impulse responses of source models."""
 import numpy as np
 from scipy.signal import remez, fftconvolve
 from sys import path
@@ -23,6 +24,7 @@ def greens_point(xs, x, c=343):
         Propagation delay (s)
     weights : (N,) array_like
         Attenuation (1)
+
     """
     xs = np.array(xs)
     x = np.array(x)
@@ -33,7 +35,7 @@ def greens_point(xs, x, c=343):
 
 
 def impulse_response(xs, x, sourcetype, fs, oversample=2, c=343):
-    """Impulse responses for a given source type
+    """Impulse responses for a given source type.
 
     Parameters
     ----------
@@ -58,50 +60,36 @@ def impulse_response(xs, x, sourcetype, fs, oversample=2, c=343):
         Shift (number of preceeding zeros) [sample]
     offset : (N,) int, array_like
         Position of the main peak [sample]
+
     """
     delay, weight = greens_point(xs, x, c)
-    Lf = 23
+    waveform_up, shift_up, offset_up = fractional_delay(delay, Lf=23, fs=oversample*fs, type='fast_lagr')
+
     f = fir_minmax(fs, oversample)
-#    f = np.concatenate((fir_minmax(fs, oversample), np.zeros(oversample-1)))
-    waveform_up, shift_up, offset_up = fractional_delay(delay, Lf, fs=oversample*fs, type='fast_lagr')
-    waveform_up = fftconvolve(f[np.newaxis, :], waveform_up)
-    
-#    waveform_up = np.column_stack((waveform_up, np.zeros((waveform_up.shape[0], oversample-1))))
-#    htemp, _, _ = construct_ir_matrix(waveform_up, shift_up, N*Q)
-    
+    filtorder = int((len(f)+1)/2)
+    waveform_up = fftconvolve(waveform_up, f[np.newaxis, :])
+
+    shift_up -= filtorder
+    offset_up -= filtorder
     shift = shift_up // oversample
     res = shift_up % oversample
     offset = offset_up // oversample
-    
+
     waveform_up = np.column_stack((waveform_up, np.zeros((len(waveform_up), oversample-1))))
-    for n in range(1, len(shift)):
+    for n in range(len(shift)):
         waveform_up[n, :] = np.roll(waveform_up[n, :], res[n])
     waveform = waveform_up[:, ::oversample]
-#        waveform = np.column_stack((waveform, waveform_temp))
-#    waveform = waveform.T
-#    n0 = shift_up % oversample
-#    shift = ((shift_up - n0) / oversample).astype(int)
-#    offset = ((offset_up - n0) / oversample).astype(int)
-#    waveform = fftconvolve(f[np.newaxis, :], waveform)[:, ::2]
-#    shift -= int((len(f)-1)/2)
-#    offset -= int((len(f)-1)/2)
     return waveform * weight[:, np.newaxis], shift, offset
-    
-    
-    
+
+
 def fir_minmax(fs, Q):
-    """Low-pass filter for sampling rate conversion
-    """
+    """Low-pass filter for sampling rate conversion."""
     fpass = 0.8 * fs / 2
     fstop = 1.0 * fs / 2
     att = -130
-    
-    order = Q * 40
+    filtorder = Q * 40
     if Q != 1:
-        f = remez(2*order+1, [0, fpass, fstop, Q*fs/2], [1, 10**((att)/20)], weight=[1, 10e5], fs=Q*fs)
+        f = remez(2*filtorder+1, [0, fpass, fstop, Q*fs/2], [1, 10**((att)/20)], weight=[1, 10e5], fs=Q*fs)
     else:
         f = np.array(1)
     return f
-
-    
-    
