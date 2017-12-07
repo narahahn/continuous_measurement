@@ -388,7 +388,7 @@ def fractional_delay(delay, Lf, fs, type):
         d = delay * fs
         if Lf % 2 == 0:
             n0 = np.ceil(d).astype(int)
-            Lh = Lf/2
+            Lh = int(Lf/2)
         elif Lf % 2 == 1:
             n0 = np.round(d).astype(int)
             Lh = (np.floor(Lf/2)).astype(int)
@@ -432,17 +432,10 @@ def construct_ir_matrix(waveform, shift, Nh):
     L, Lf = waveform.shape
     h = np.zeros((L, Nh))
     for n in range(L):
-        
-#         ni = np.max([0, Nh/2+shift[n]])
-#         nf = np.min([Nh, Nh/2+shift[n]+Lf])
-#         idx = np.arange(ni, nf).astype(int)
-        
-#        idx = (np.arange(Nh/2 + shift[n], Nh/2 + shift[n] + Lf)).astype(int)
         idx = (np.arange(shift[n], shift[n] + Lf)).astype(int)
         h[n, idx] = waveform[n,:]
     H = np.fft.fft(h)
-    Ho = (1/L) * np.roll(np.fft.fft(H, axis=0), int(L/2), axis=0)
-    
+    Ho = (1/L) * np.roll(np.fft.fft(H, axis=0), int(L/2), axis=0)    
     return h, H, Ho
 
 
@@ -465,9 +458,6 @@ def captured_signal(waveform, shift, p):
                 captured signal
     
     """
-#    p = perfect_sweep(N)
-#    p = perfect_sequence_randomphase(N)
-    
     return time_varying_delay(waveform, shift, p)
         
 def time_varying_delay(waveform, shift, p):
