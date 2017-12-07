@@ -25,22 +25,22 @@ source_type = 'point'
 
 # Receiver
 R = 0.5
-Omega = 2 * np.pi / 12
+Omega = 2 * np.pi / 16
 L = int(2 * np.pi / Omega * fs)
 t = (1/fs) * np.arange(L)
-phi0 = 0
+phi0 = -1e0
 phi = Omega * t + phi0
 xm = [R*np.cos(phi), R*np.sin(phi), np.zeros_like(phi)]
 
 # Excitation
-N = 1600  # excitation period
+N = 800  # excitation period
 p = perfect_sequence_randomphase(N)
 #p = perfect_sweep(N)
 
 # Experimental parameters
-K = 360  # number of target angles
+K = 720  # number of target angles
 #Lf = 21  # fractional delay filter length
-int_order = 15  # spatial interpolation order
+int_order = 7  # spatial interpolation order
 Omega_al = c / N / R  # anti-aliasing angular speed
 
 # Captured signal
@@ -48,7 +48,7 @@ waveform_l, shift_l, offset_l = impulse_response(xs, xm, 'point', fs)
 s = captured_signal(waveform_l, shift_l, p)
 
 # Desired impulse responses at selected angles
-phi_k = np.linspace(0, 2 * np.pi, num=K, endpoint=False) + 1e-3
+phi_k = np.linspace(0, 2 * np.pi, num=K, endpoint=False)
 x_k = [R*np.cos(phi_k), R*np.sin(phi_k), np.zeros_like(phi_k)]
 delay_k, weight_k = greens_point(xs, x_k)
 waveform_k, shift_k, offset_k = impulse_response(xs, x_k, 'point', fs)
@@ -58,8 +58,8 @@ h0, _, _ = construct_ir_matrix(waveform_k, shift_k, N)
 hhat = np.zeros((K, N))
 yhat = np.zeros((K, N))
 dphi = 2 * np.pi / L * N
-n_phi = phi / dphi
-n_phik = phi_k / dphi
+#n_phi = phi / dphi
+n_phik = (phi_k - phi0) / dphi
 L_int = int_order + 1
 
 # Spatial interpolation -- Barycentric form
@@ -68,10 +68,10 @@ w = comb(L_int-1, ii) * (-1)**ii
 for n in range(N):
     if L_int % 2 == 0:
         n0 = np.ceil(n_phik - n/N).astype(int)
-        Lh = L_int/2
+        Lh = int(L_int/2)
     elif L_int % 2 == 1:
         n0 = np.round(n_phik - n/N).astype(int)
-        Lh = (np.floor(L_int/2)).astype(int)
+        Lh = int((L_int+1)/2)
     idx_matrix = n0[:, np.newaxis] + (np.arange(-Lh, -Lh+L_int))[np.newaxis, :]
     offset = n0
     shift = n0 - Lh
@@ -140,6 +140,18 @@ plt.xlabel(r'$f$ / Hz')
 plt.ylabel('Magnitude / dB')
 plt.title('Transfer Function ($\phi={}^\circ$)'.format(360*nn/K))
 
+# Fig. Impulse response coefficients in dB
+plt.figure()
+plt.pcolormesh(np.rad2deg(phi_k), tau, db(hhat).T)
+plt.axis('normal')
+cb = plt.colorbar(label='dB')
+plt.clim(-100, 0)
+plt.xlabel(r'$\phi$ / $^\circ$')
+plt.ylabel(r'$\tau$ / ms')
+plt.xlim(0, 360)
+plt.ylim(0, N/fs*1000)
+plt.title('FIR Coefficient Error')
+
 # Fig. Impulse response coefficient errors in dB
 plt.figure()
 plt.pcolormesh(np.rad2deg(phi_k), tau, db(h0-hhat).T)
@@ -166,7 +178,7 @@ plt.title('Spectral Distortion')
 
 # Fig. Normalized system distance in dB
 plt.figure()
-plt.plot(np.rad2deg(phi_k), db(np.sum((h0-hhat)**2, axis=-1) / np.sum(h0**2, axis=-1)))
+plt.plot(np.rad2deg(phi_k), db(np.sqrt(np.sum((h0-hhat)**2, axis=-1) / np.sum(h0**2, axis=-1))))
 plt.xlim(0, 360)
 plt.ylim(-150, 0)
 plt.xlabel(r'$\phi$ / $^\circ$')
