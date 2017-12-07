@@ -11,10 +11,11 @@ import scipy.signal as signal
 from sys import path
 path.append('../')
 from utils import *
+from source import *
 
 # Constants
 c = 343
-fs = 16000
+fs = 8000
 
 # Source
 xs = [0, 2, 0]  # Point source
@@ -22,7 +23,7 @@ source_type = 'point'
 
 # Receiver
 R = 0.5
-Omega = 2 * np.pi / 20
+Omega = 2 * np.pi / 16
 L = int(2 * np.pi / Omega * fs)
 t = (1/fs) * np.arange(L)
 phi0 = 0
@@ -33,32 +34,42 @@ xm = [R*np.cos(phi), R*np.sin(phi), np.zeros_like(phi)]
 
 
 # Excitation
-N = 1600  # excitation period
+N = 800  # excitation period
 p = perfect_sequence_randomphase(N)
 #p = perfect_sweep(N)
 
 # Experimental parameters
-K = 320  # number of target angles
+K = 360  # number of target angles
 Lf = 21  # fractional delay filter length
-int_order = 20  # spatial interpolation order
+int_order = 4  # spatial interpolation order
 Omega_al = c / N / R  # anti-aliasing angular speed
 
 # Captured signal
 #delay = distance / c
 #weight = 1/4/np.pi/distance
-delay, weight = point(xs, xm)
-waveform, shift, offset = fractional_delay(delay, Lf, fs=fs, type='fast_lagr')
-s = captured_signal(waveform*weight[:, np.newaxis], shift, p)
+#delay, weight = greens_point(xs, xm)
+#waveform, shift, offset = fractional_delay(delay, Lf, fs=fs, type='fast_lagr')
+#h0, _, _ = construct_ir_matrix(waveform_k, shift_k, N)
+#s = captured_signal(waveform*weight[:, np.newaxis], shift, p)
+
+waveform_l, shift_l, offset_l = impulse_response(xs, xm, 'point', fs)
+s = captured_signal(waveform_l, shift_l, p)
+
 
 # The desired impulse responses at selected angles
-phi_k = np.linspace(0, 2 * np.pi, num=K, endpoint=False) + 10e-2
+phi_k = np.linspace(0, 2 * np.pi, num=K, endpoint=False) + 1e-3
 #distance_k = np.sqrt((R*np.cos(phi_k)-xs[0])**2 + (R*np.sin(phi_k)-xs[1])**2)
 x_k = [R*np.cos(phi_k), R*np.sin(phi_k), np.zeros_like(phi_k)]
 #delay_k = distance_k / c
-delay_k, weight_k = point(xs, x_k)
+delay_k, weight_k = greens_point(xs, x_k)
 #weight_k = 1/4/np.pi/distance_k
-waveform_k, shift_k, offset_k = fractional_delay(delay_k, Lf, fs=fs, type='fast_lagr')
-h0, _, _ = construct_ir_matrix(waveform_k*weight_k[:, np.newaxis], shift_k, N)
+#waveform_k, shift_k, offset_k = fractional_delay(delay_k, Lf, fs=fs, type='fast_lagr')
+#h0, _, _ = construct_ir_matrix(waveform_k*weight_k[:, np.newaxis], shift_k, N)
+
+waveform_k, shift_k, offset_k = impulse_response(xs, x_k, 'point', fs)
+h0, _, _ = construct_ir_matrix(waveform_k, shift_k, N)
+
+
 
 # System identification
 hhat = np.zeros((K, N))
@@ -165,19 +176,19 @@ plt.title('Spectral Distortion')
 plt.figure()
 plt.plot(np.rad2deg(phi_k), db(np.sum((h0-hhat)**2, axis=-1) / np.sum(h0**2, axis=-1)))
 plt.xlim(0, 360)
-plt.ylim(-120, 0)
+#plt.ylim(-150, 0)
 plt.xlabel(r'$\phi$ / $^\circ$')
 plt.ylabel('NMSE / dB')
 plt.title('Normalized Mean Square Error')
 
 plt.figure()
-plt.imshow(db(np.fft.fft2(h0)).T, vmin=-120)
+plt.imshow(db(np.fft.fftshift(np.fft.fft2(h0), axes=0)).T, vmin=-120)
 plt.axis('normal')
 plt.colorbar()
 #plt.clim(-150, 20)
 
 plt.figure()
-plt.imshow(db(np.fft.fft2(hhat)).T, vmin=-120)
+plt.imshow(db(np.fft.fftshift(np.fft.fft2(hhat), axes=0)).T, vmin=-120)
 plt.axis('normal')
 plt.colorbar()
 

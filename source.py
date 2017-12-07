@@ -61,28 +61,29 @@ def impulse_response(xs, x, sourcetype, fs, oversample=2, c=343):
     """
     delay, weight = greens_point(xs, x, c)
     Lf = 23
-    f = fir_minmax(fs, oversample)
+    f = np.concatenate((fir_minmax(fs, oversample), np.zeros(oversample-1)))
     waveform_up, shift_up, offset_up = fractional_delay(delay, Lf, fs=oversample*fs, type='fast_lagr')
     waveform_up = fftconvolve(f[np.newaxis, :], waveform_up)
-    
+#    waveform_up = np.column_stack((waveform_up, np.zeros((waveform_up.shape[0], oversample-1))))
 #    htemp, _, _ = construct_ir_matrix(waveform_up, shift_up, N*Q)
     
     shift = shift_up // oversample
     res = shift_up % oversample
     offset = offset_up // oversample
     
-    waveform = np.append(np.zeros(res[0]), waveform_up[0, :])[::oversample]
+#    waveform = np.append(np.zeros(res[0]), waveform_up[0, :])[::oversample]
     for n in range(1, len(shift)):
-        waveform_temp = np.append(np.zeros(res[n]), waveform_up[n, :])[::oversample]
-        waveform = np.column_stack((waveform, waveform_temp))
-    waveform = waveform.T
+        waveform_up[n, :] = np.roll(waveform_up[n, :], res[n])
+    waveform = waveform_up[:, ::oversample]
+#        waveform = np.column_stack((waveform, waveform_temp))
+#    waveform = waveform.T
 #    n0 = shift_up % oversample
 #    shift = ((shift_up - n0) / oversample).astype(int)
 #    offset = ((offset_up - n0) / oversample).astype(int)
 #    waveform = fftconvolve(f[np.newaxis, :], waveform)[:, ::2]
 #    shift -= int((len(f)-1)/2)
 #    offset -= int((len(f)-1)/2)
-    return waveform*weight[:, np.newaxis], shift, offset
+    return waveform * weight[:, np.newaxis], shift, offset
     
     
     

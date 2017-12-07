@@ -15,7 +15,7 @@ from source import *
 
 # Constants
 c = 343
-fs = 32000
+fs = 44100
 
 # Source
 xs = [0, 2, 0]  # Point source
@@ -25,32 +25,16 @@ source_type = 'point'
 R = 0.5
 
 # Experimental parameters
-N = 1600  # FIR filter length
+N = 4410  # FIR filter length
 K = 720  # number of target angles
 Lf = 24  # fractional delay filter length
-
-# oversampling 
-Q = 2  # oversampling factor
-fpass = fs/2 * 0.8
-fstop = fs/2 * 1.0
-att = -130
-order = Q * 40
-if Q != 1:
-    f = sig.remez(2*order+1, [0, fpass, fstop, Q*fs/2], [1, 10**((att)/20)], weight=[1, 10e5], fs=Q*fs)
-    w, F = signal.freqz(f)
-    plt.figure()
-    plt.plot(w/2/np.pi*fs*Q, db(F))
-    plt.ylim(bottom=att-10)
-        
-    plt.figure()
-    plt.plot(f)
 
 # The impulse responses at selected angles
 phi_k = np.linspace(0, 2 * np.pi, num=K, endpoint=False)
 x_k = [R*np.cos(phi_k), R*np.sin(phi_k), np.zeros_like(phi_k)]
-waveform_k, shift_k, offset_k = impulse_response(xs, x_k, 'point', fs, oversample=2, c=343)
+waveform_k, shift_k, offset_k = impulse_response(xs, x_k, 'point', fs)
 h0, _, _ = construct_ir_matrix(waveform_k, shift_k, N)
-    
+
 
 # Plots
 nn = np.random.randint(0, K+1)
