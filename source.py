@@ -61,9 +61,11 @@ def impulse_response(xs, x, sourcetype, fs, oversample=2, c=343):
     """
     delay, weight = greens_point(xs, x, c)
     Lf = 23
-    f = np.concatenate((fir_minmax(fs, oversample), np.zeros(oversample-1)))
+    f = fir_minmax(fs, oversample)
+#    f = np.concatenate((fir_minmax(fs, oversample), np.zeros(oversample-1)))
     waveform_up, shift_up, offset_up = fractional_delay(delay, Lf, fs=oversample*fs, type='fast_lagr')
     waveform_up = fftconvolve(f[np.newaxis, :], waveform_up)
+    
 #    waveform_up = np.column_stack((waveform_up, np.zeros((waveform_up.shape[0], oversample-1))))
 #    htemp, _, _ = construct_ir_matrix(waveform_up, shift_up, N*Q)
     
@@ -71,7 +73,7 @@ def impulse_response(xs, x, sourcetype, fs, oversample=2, c=343):
     res = shift_up % oversample
     offset = offset_up // oversample
     
-#    waveform = np.append(np.zeros(res[0]), waveform_up[0, :])[::oversample]
+    waveform_up = np.column_stack((waveform_up, np.zeros((len(waveform_up), oversample-1))))
     for n in range(1, len(shift)):
         waveform_up[n, :] = np.roll(waveform_up[n, :], res[n])
     waveform = waveform_up[:, ::oversample]
@@ -93,6 +95,7 @@ def fir_minmax(fs, Q):
     fpass = 0.8 * fs / 2
     fstop = 1.0 * fs / 2
     att = -130
+    
     order = Q * 40
     if Q != 1:
         f = remez(2*order+1, [0, fpass, fstop, Q*fs/2], [1, 10**((att)/20)], weight=[1, 10e5], fs=Q*fs)
