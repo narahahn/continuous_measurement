@@ -33,6 +33,7 @@ K = 360  # number of target angles
 phi = np.linspace(0, 2 * np.pi, num=K, endpoint=False)
 x = [R*np.cos(phi), R*np.sin(phi), np.zeros_like(phi)]
 waveform, shift, offset = impulse_response(xs, x, 'point', fs)
+#waveform, shift, offset = impulse_response([0, -1, 0], x, 'plane', fs)
 h, _, _ = construct_ir_matrix(waveform, shift, N)
 
 
@@ -90,7 +91,7 @@ plt.clim(-120, -20)
 plt.xlabel(r'$\phi$ / $^\circ$')
 plt.ylabel(r'$\tau$ / ms')
 plt.xlim(0, 360)
-plt.ylim(0, N/fs*1000)
+plt.ylim(0, 20)
 plt.title('Impulse Responses')
 
 # Fig. 2D plot of the transfer functions

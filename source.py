@@ -5,6 +5,32 @@ from sys import path
 path.append('../')
 from utils import *
 
+def greens_plane(npw, x, c=343):
+    """Greens function of a plane wave.
+    
+    Parameters
+    ----------
+    npw : (3,) array_like
+        Plane wave (propagating) direction
+    x : (N, 3) array_like
+        Receiver positions in the Cartesian coordinate [m]
+    c : float
+        Speed of sound [m/s]
+
+    Returns
+    -------
+    delay : (N,) array_like
+        Delay with respect to the origin [s]
+    weight : (N,) array_like
+        Attenuation
+
+    """
+    npw = np.array(npw) / np.linalg.norm(npw)
+    x = np.array(x)
+    if x.shape[1] != 3 & x.shape[0] == 3:
+        x = x.T
+    return -x.dot(npw)/c, 1
+
 
 def greens_point(xs, x, c=343):
     """Greens function of a point source.
@@ -12,18 +38,18 @@ def greens_point(xs, x, c=343):
     Parameters
     ----------
     xs : (3,) array_like
-        Source position in the Cartesian coordiate (m)
+        Source position in the Cartesian coordiate [m]
     x : (N, 3) array_like
-        Receiver positions in the Cartesian coordinate(m)
+        Receiver positions in the Cartesian coordinate [m]
     c : float
-        Speed of sound (m/s)
+        Speed of sound [m/s]
 
     Returns
     -------
     delay : (N,) array_like
-        Propagation delay (s)
+        Propagation delay [s]
     weights : (N,) array_like
-        Attenuation (1)
+        Attenuation
 
     """
     xs = np.array(xs)
@@ -62,7 +88,14 @@ def impulse_response(xs, x, sourcetype, fs, oversample=2, c=343):
         Position of the main peak [sample]
 
     """
-    delay, weight = greens_point(xs, x, c)
+    if sourcetype == 'point':
+        delay, weight = greens_point(xs, x, c)
+    elif sourcetype == 'plane':
+        delay, weight = greens_plane(xs, x, c)
+        weight = weight * np.ones_like(delay)
+        delay -= np.min(delay)
+    else:
+        print('sourcetype error')
     waveform_up, shift_up, offset_up = fractional_delay(delay, Lf=23, fs=oversample*fs, type='fast_lagr')
 
     f = fir_minmax(fs, oversample)
