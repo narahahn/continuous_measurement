@@ -25,7 +25,7 @@ source_type = 'point'
 
 # Receiver
 R = 0.5
-Omega = 2 * np.pi / 20
+Omega = 2 * np.pi / 24
 L = int(2 * np.pi / Omega * fs)
 t = (1/fs) * np.arange(L)
 phi0 = -1e0
@@ -40,17 +40,14 @@ p = perfect_sequence_randomphase(N)
 # Experimental parameters
 K = 720  # number of target angles
 #Lf = 21  # fractional delay filter length
-int_order = 10  # spatial interpolation order
+int_order = 15  # spatial interpolation order
 Omega_al = c / N / R  # anti-aliasing angular speed
 
 # Captured signal
 waveform_l, shift_l, offset_l = impulse_response(xs, xm, 'point', fs)
 s = captured_signal(waveform_l, shift_l, p)
-additive_noise = np.random.randn(len(s))
-Es = np.std(s)
-En = np.std(additive_noise)
 snr = -120
-s += additive_noise / En * Es * 10**(snr/20)
+s += additive_noise(s, snr)
 
 # Desired impulse responses at selected angles
 phi_k = np.linspace(0, 2 * np.pi, num=K, endpoint=False)
@@ -61,23 +58,6 @@ h0, _, _ = construct_ir_matrix(waveform_k, shift_k, N)
 
 # System identification
 hhat = system_identification(phi, s, phi_k, p, interpolation='lagrange', int_order=int_order)
-
-# System identification
-#hhat = np.zeros((K, N))
-#for k in range(K):
-#    y = np.zeros(N)
-#    for n in range(N):
-#        phitemp = np.mod(phi[n::N], 2*np.pi)
-#        sm = s[n::N]
-#        idx_sort = np.argsort(phitemp)
-#        phitemp = phitemp[idx_sort]
-#        sm = sm[idx_sort]
-#
-#        phitemp = np.concatenate([phitemp-2*np.pi, phitemp, phitemp+2*np.pi])
-#        sm = np.concatenate([sm, sm, sm])
-#
-#        y[n] = fdfilter(phitemp, sm, phi_k[k], order=int_order)
-#    hhat[k, :] = cxcorr(y, p)
 
 
 # Plots
@@ -156,7 +136,7 @@ plt.title('Spectral Distortion')
 plt.figure()
 plt.plot(np.rad2deg(phi_k), db(np.sqrt(np.sum((h0-hhat)**2, axis=-1) / np.sum(h0**2, axis=-1))))
 plt.xlim(0, 360)
-plt.ylim(-150, 0)
+plt.ylim(-120, 0)
 plt.xlabel(r'$\phi$ / $^\circ$')
 plt.ylabel('NMSE / dB')
 plt.title('Normalized Mean Square Error')
@@ -167,7 +147,7 @@ plt.pcolormesh(order, freq/1000, db(np.fft.fftshift(np.fft.fft2(h0), axes=0)[:, 
 plt.axis('normal')
 plt.xlabel('CHT order')
 plt.ylabel(r'$f$ / kHz')
-plt.colorbar()
+plt.colorbar(label='dB')
 plt.title('CHT spectrum - original')
 
 # Fig. CHT spectrum of the impulse responses
@@ -176,5 +156,5 @@ plt.pcolormesh(order, freq/1000, db(np.fft.fftshift(np.fft.fft2(hhat), axes=0)[:
 plt.axis('normal')
 plt.xlabel('CHT order')
 plt.ylabel(r'$f$ / kHz')
-plt.colorbar()
+plt.colorbar(label='dB')
 plt.title('CHT spectrum - measured')

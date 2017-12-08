@@ -512,7 +512,7 @@ def system_identification(phi, s, phi_target, p, interpolation='lagrange', int_o
     common_weight = comb(L_int-1, idx_int) * (-1)**idx_int
     for n in range(N):
         if L_int % 2 == 0:
-            idx_first = np.ceil(idx_int - n/N).astype(int)
+            idx_first = np.ceil(idx_target - n/N).astype(int)
             L_half = int(L_int/2)
         elif L_int % 2 == 1:
             idx_first = np.round(idx_target - n/N).astype(int)
@@ -647,3 +647,16 @@ def fir_linph_ls(fpass, fstop, att, order, fs, density=10):
 #    h1 = np.flipud(g1)
     return h
 
+
+def additive_noise(s, snr):
+    """Additive white noise with a given SNR relative to the input signal"""
+
+    additive_noise = np.random.randn(len(s))
+    Es = np.std(s)
+    En = np.std(additive_noise)
+    return additive_noise / En * Es * 10**(snr/20)
+    
+    
+    
+    
+    
