@@ -20,7 +20,7 @@ c = 343
 fs = 16000
 
 # Source
-xs = [0, 2, 0]  # Point source
+xs = [0, 8, 0]  # Point source
 source_type = 'point'
 
 # Receiver
@@ -33,19 +33,24 @@ phi = Omega * t + phi0
 xm = [R*np.cos(phi), R*np.sin(phi), np.zeros_like(phi)]
 
 # Excitation
-N = 800  # excitation period
+N = 1600  # excitation period
 p = perfect_sequence_randomphase(N)
 #p = perfect_sweep(N)
 
 # Experimental parameters
 K = 720  # number of target angles
 #Lf = 21  # fractional delay filter length
-int_order = 7  # spatial interpolation order
+int_order = 10  # spatial interpolation order
 Omega_al = c / N / R  # anti-aliasing angular speed
 
 # Captured signal
 waveform_l, shift_l, offset_l = impulse_response(xs, xm, 'point', fs)
 s = captured_signal(waveform_l, shift_l, p)
+additive_noise = np.random.randn(len(s))
+Es = np.std(s)
+En = np.std(additive_noise)
+snr = -60
+s += additive_noise / En * Es * 10**(snr/20)
 
 # Desired impulse responses at selected angles
 phi_k = np.linspace(0, 2 * np.pi, num=K, endpoint=False)
@@ -142,15 +147,15 @@ plt.title('Transfer Function ($\phi={}^\circ$)'.format(360*nn/K))
 
 # Fig. Impulse response coefficients in dB
 plt.figure()
-plt.pcolormesh(np.rad2deg(phi_k), tau, db(hhat).T)
+plt.pcolormesh(np.rad2deg(phi_k), tau, db(hhat).T, vmin=-100)
 plt.axis('normal')
 cb = plt.colorbar(label='dB')
-plt.clim(-100, 0)
+#plt.clim(-100, 0)
 plt.xlabel(r'$\phi$ / $^\circ$')
 plt.ylabel(r'$\tau$ / ms')
 plt.xlim(0, 360)
 plt.ylim(0, N/fs*1000)
-plt.title('FIR Coefficient Error')
+plt.title('FIR Coefficients')
 
 # Fig. Impulse response coefficient errors in dB
 plt.figure()
@@ -192,6 +197,7 @@ plt.axis('normal')
 plt.xlabel('CHT order')
 plt.ylabel(r'$f$ / kHz')
 plt.colorbar()
+plt.title('CHT spectrum - original')
 
 # Fig. CHT spectrum of the impulse responses
 plt.figure(figsize=(10, 4))
@@ -200,3 +206,4 @@ plt.axis('normal')
 plt.xlabel('CHT order')
 plt.ylabel(r'$f$ / kHz')
 plt.colorbar()
+plt.title('CHT spectrum - measured')
