@@ -25,7 +25,7 @@ source_type = 'point'
 
 # Receiver
 R = 0.5
-Omega = 2 * np.pi / 16
+Omega = 2 * np.pi / 20
 L = int(2 * np.pi / Omega * fs)
 t = (1/fs) * np.arange(L)
 phi0 = -1e0
@@ -49,7 +49,7 @@ s = captured_signal(waveform_l, shift_l, p)
 additive_noise = np.random.randn(len(s))
 Es = np.std(s)
 En = np.std(additive_noise)
-snr = -60
+snr = -120
 s += additive_noise / En * Es * 10**(snr/20)
 
 # Desired impulse responses at selected angles
@@ -60,36 +60,7 @@ waveform_k, shift_k, offset_k = impulse_response(xs, x_k, 'point', fs)
 h0, _, _ = construct_ir_matrix(waveform_k, shift_k, N)
 
 # System identification
-hhat = np.zeros((K, N))
-yhat = np.zeros((K, N))
-dphi = 2 * np.pi / L * N
-#n_phi = phi / dphi
-n_phik = (phi_k - phi0) / dphi
-L_int = int_order + 1
-
-# Spatial interpolation -- Barycentric form
-ii = np.arange(L_int)
-w = comb(L_int-1, ii) * (-1)**ii
-for n in range(N):
-    if L_int % 2 == 0:
-        n0 = np.ceil(n_phik - n/N).astype(int)
-        Lh = int(L_int/2)
-    elif L_int % 2 == 1:
-        n0 = np.round(n_phik - n/N).astype(int)
-        Lh = int((L_int+1)/2)
-    idx_matrix = n0[:, np.newaxis] + (np.arange(-Lh, -Lh+L_int))[np.newaxis, :]
-    offset = n0
-    shift = n0 - Lh
-    waveform = w[np.newaxis, :] / (n_phik[:, np.newaxis] - n/N - idx_matrix)
-    waveform /= np.sum(waveform, axis=-1)[:, np.newaxis]
-    s_n = s[n::N]
-    for k in range(K):
-        idx = np.arange(shift[k], shift[k]+L_int).astype(int)
-        yhat[k, n] = np.dot(s_n[np.mod(idx, int(L/N))], waveform[k, :])
-
-for k in range(K):
-    hhat[k, :] = cxcorr(yhat[k, :], p)
-
+hhat = system_identification(phi, s, phi_k, p, interpolation='lagrange', int_order=int_order)
 
 # System identification
 #hhat = np.zeros((K, N))

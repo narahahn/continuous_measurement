@@ -472,6 +472,65 @@ def time_varying_delay(waveform, shift, p):
         s[n] = np.dot(p[np.mod(n - idx, N)], waveform[n, :])
     return s
 
+
+def system_identification(phi, s, phi_target, p, interpolation='lagrange', int_order=1):
+    """System identification using spatial interpolation.
+
+    Note: This works only for uniformly moving microphones
+
+    Parameters
+    ----------
+    phi : (N,) array_like
+        Microphone angle [rad]
+    s : (N,) array_like
+        Captured signal
+    phi_target : (K,) array_like
+        Target angles [rad]
+    p : (L,) array_like
+        Excitation signal (one period)
+    interpolation : string, optional
+        Interpolation method, optioanl
+    int_order : int
+        Interpolation order
+
+    Return
+    ------
+    h : (K, N) array_like
+        Impulse response coefficients
+
+    """
+    L = len(s)
+    K = len(phi_target)
+    N = len(p)
+    h = np.zeros((K, N))
+    y = np.zeros((K, N))
+    dphi = 2 * np.pi / L * N
+
+    idx_target = (phi_target - phi[0]) / dphi
+    L_int = int_order + 1
+    idx_int = np.arange(L_int)
+    common_weight = comb(L_int-1, idx_int) * (-1)**idx_int
+    for n in range(N):
+        if L_int % 2 == 0:
+            idx_first = np.ceil(idx_int - n/N).astype(int)
+            L_half = int(L_int/2)
+        elif L_int % 2 == 1:
+            idx_first = np.round(idx_target - n/N).astype(int)
+            L_half = int((L_int+1)/2)
+        idx = idx_first[:, np.newaxis] + (np.arange(-L_half, -L_half+L_int))[np.newaxis, :]
+        offset = idx_first
+        shift = offset - L_half
+        waveform = common_weight[np.newaxis, :] / (idx_target[:, np.newaxis] - n/N - idx)
+        waveform /= np.sum(waveform, axis=-1)[:, np.newaxis]
+        s_n = s[n::N]
+        for k in range(K):
+            idx_n = np.arange(shift[k], shift[k]+L_int).astype(int)
+            y[k, n] = np.dot(s_n[np.mod(idx_n, int(L/N))], waveform[k, :])
+    for k in range(K):
+        h[k, :] = cxcorr(y[k, :], p)
+    return h
+
+
 def estimate_irs(s, N, idx, order):
     """
     Compute IRs by interpolating the orthogonal coefficients
