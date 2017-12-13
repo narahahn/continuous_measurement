@@ -18,7 +18,7 @@ c = 343
 fs = 16000
 
 # Source
-xs = [0, 2, 0]  # Point source
+xs = [0, 20, 0]  # Point source
 source_type = 'point'
 
 # Receiver
@@ -32,8 +32,8 @@ K = 360  # number of target angles
 # The impulse responses at selected angles
 phi = np.linspace(0, 2 * np.pi, num=K, endpoint=False)
 x = [R*np.cos(phi), R*np.sin(phi), np.zeros_like(phi)]
-waveform, shift, offset = impulse_response(xs, x, 'point', fs)
-#waveform, shift, offset = impulse_response([0, -1, 0], x, 'plane', fs)
+#waveform, shift, offset = impulse_response(xs, x, 'point', fs)
+waveform, shift, offset = impulse_response([0, -1, 0], x, 'plane', fs)
 h, _, _ = construct_ir_matrix(waveform, shift, N)
 
 
@@ -63,7 +63,7 @@ plt.title('Impulse Response ($\phi={}^\circ$)'.format(360*nn/K))
 plt.figure()
 plt.plot(freq, db(np.fft.rfft(h[nn, :])))
 plt.xscale('log')
-plt.xlim(0, fs/2)
+plt.xlim(20, fs/2)
 plt.ylim(-60, 0)
 plt.title('Transfer Function ($\phi={}^\circ$)'.format(360*nn/K))
 
@@ -76,7 +76,7 @@ plt.clim(-0.05, 0.05)
 plt.xlabel(r'$\phi$ / $^\circ$')
 plt.ylabel(r'$\tau$ / ms')
 plt.xlim(0, 360)
-plt.ylim(0, 20)
+#plt.ylim(0, 20)
 plt.title('Impulse Responses')
 #plt.plot([0, 360], [1.5/c*1000, 1.5/c*1000])
 #plt.plot([0, 360], [2.5/c*1000, 2.5/c*1000])
@@ -91,7 +91,7 @@ plt.clim(-120, -20)
 plt.xlabel(r'$\phi$ / $^\circ$')
 plt.ylabel(r'$\tau$ / ms')
 plt.xlim(0, 360)
-plt.ylim(0, 20)
+#plt.ylim(0, 20)
 plt.title('Impulse Responses')
 
 # Fig. 2D plot of the transfer functions
