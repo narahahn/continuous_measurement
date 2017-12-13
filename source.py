@@ -29,7 +29,9 @@ def greens_plane(npw, x, c=343):
     x = np.array(x)
     if x.shape[1] != 3 & x.shape[0] == 3:
         x = x.T
-    return -x.dot(npw)/c, 1
+    delay = x.dot(npw)/c
+#    delay -= np.min(delay)
+    return delay, 1
 
 
 def greens_point(xs, x, c=343):
@@ -93,7 +95,6 @@ def impulse_response(xs, x, sourcetype, fs, oversample=2, c=343):
     elif sourcetype == 'plane':
         delay, weight = greens_plane(xs, x, c)
         weight = weight * np.ones_like(delay)
-        delay -= np.min(delay)
     else:
         print('sourcetype error')
     waveform_up, shift_up, offset_up = fractional_delay(delay, Lf=23, fs=oversample*fs, type='fast_lagr')
