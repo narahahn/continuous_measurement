@@ -397,9 +397,12 @@ def fractional_delay(delay, Lf, fs, type):
         shift = n0 - Lh
         
         ii = np.arange(Lf)
-        w = comb(Lf-1, ii) * (-1)**ii
-        waveform = w[np.newaxis, :] / (d[:, np.newaxis] - idx_matrix)
-        waveform /= np.sum(waveform, axis=-1)[:, np.newaxis]
+        common_weight = comb(Lf-1, ii) * (-1)**ii
+
+        is_int = d%1==0
+        waveform[~is_int, :] = common_weight[np.newaxis, :] / (d[~is_int, np.newaxis] - idx_matrix[~is_int, :])
+        waveform[~is_int, :] /= np.sum(waveform[~is_int, :], axis=-1)[:, np.newaxis]
+        waveform[is_int, Lh] = 1
     else:
         print('unknown type')
     return waveform, shift, offset
@@ -509,7 +512,7 @@ def system_identification(phi, s, phi_target, p, interpolation='lagrange', int_o
     idx_target = (phi_target - phi[0]) / dphi
     L_int = int_order + 1
     idx_int = np.arange(L_int)
-    common_weight = comb(L_int-1, idx_int) * (-1)**idx_int
+    common_weight = comb(int_order, idx_int) * (-1)**idx_int
     for n in range(N):
         if L_int % 2 == 0:
             idx_first = np.ceil(idx_target - n/N).astype(int)
@@ -523,9 +526,13 @@ def system_identification(phi, s, phi_target, p, interpolation='lagrange', int_o
         waveform = common_weight[np.newaxis, :] / (idx_target[:, np.newaxis] - n/N - idx)
         waveform /= np.sum(waveform, axis=-1)[:, np.newaxis]
         s_n = s[n::N]
+        is_int = (idx_target-n/N)%1==0
         for k in range(K):
-            idx_n = np.arange(shift[k], shift[k]+L_int).astype(int)
-            y[k, n] = np.dot(s_n[np.mod(idx_n, int(L/N))], waveform[k, :])
+            if is_int[k]:
+                y[k, n] = s_n[idx_first[k]]
+            else:
+                idx_n = np.arange(shift[k], shift[k]+L_int).astype(int)
+                y[k, n] = np.dot(s_n[np.mod(idx_n, int(L/N))], waveform[k, :])
     for k in range(K):
         h[k, :] = cxcorr(y[k, :], p)
     return h
