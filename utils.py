@@ -121,8 +121,18 @@ def time_reverse(x):
     N = len(x)
     return np.roll(x,-1)[N-1::-1]
 
-def db(x):
-    return 20*np.log10(np.abs(x))
+def db(x, power=False):
+    """Convert *x* to decibel.
+    Parameters
+    ----------
+    x : array_like
+        Input data.  Values of 0 lead to negative infinity.
+    power : bool, optional
+        If ``power=False`` (the default), *x* is squared before
+        conversion.
+    """
+    with np.errstate(divide='ignore'):
+        return 10 if power else 20 * np.log10(np.abs(x))
 
 def mk_win(L):
     wleft = 0.5*(np.cos(np.pi * np.arange(L) / (L-1))+1)
