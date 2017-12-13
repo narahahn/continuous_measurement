@@ -22,6 +22,8 @@ fs = 16000
 # Source
 xs = [0, 8, 0]  # Point source
 source_type = 'point'
+xs = [0, -1, 0]
+source_type = 'plane'
 
 # Receiver
 R = 0.5
@@ -44,7 +46,7 @@ int_order = 15  # spatial interpolation order
 Omega_al = c / N / R  # anti-aliasing angular speed
 
 # Captured signal
-waveform_l, shift_l, offset_l = impulse_response(xs, xm, 'point', fs)
+waveform_l, shift_l, offset_l = impulse_response(xs, xm, source_type, fs)
 s = captured_signal(waveform_l, shift_l, p)
 snr = -120
 s += additive_noise(s, snr)
@@ -53,7 +55,7 @@ s += additive_noise(s, snr)
 phi_k = np.linspace(0, 2 * np.pi, num=K, endpoint=False)
 x_k = [R*np.cos(phi_k), R*np.sin(phi_k), np.zeros_like(phi_k)]
 delay_k, weight_k = greens_point(xs, x_k)
-waveform_k, shift_k, offset_k = impulse_response(xs, x_k, 'point', fs)
+waveform_k, shift_k, offset_k = impulse_response(xs, x_k, source_type, fs)
 h0, _, _ = construct_ir_matrix(waveform_k, shift_k, N)
 
 # System identification
@@ -90,7 +92,7 @@ plt.plot(freq, db(np.fft.rfft(h0[nn,:])), label='original', linewidth=5, color='
 plt.plot(freq, db(np.fft.rfft(hhat[nn,:])), label='estimate')
 plt.legend(loc='best')
 plt.xscale('log')
-plt.xlim(0, fs/2)
+plt.xlim(20, fs/2)
 plt.ylim(-60, 0)
 plt.xlabel(r'$f$ / Hz')
 plt.ylabel('Magnitude / dB')
