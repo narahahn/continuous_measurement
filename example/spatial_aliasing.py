@@ -65,7 +65,7 @@ for ii, Omega in enumerate(angular_speed):
     h[:, :, ii] = system_identification(phi, s, phi_k, p, interpolation='lagrange', int_order=int_order)
 
 nmse = (np.sum((h-h0[:,:,np.newaxis])**2, axis=1) / np.sum(h0**2, axis=1)[:, np.newaxis])**0.5
-ave_nmse = np.mean(nmse, axis=0)
+mean_nmse = np.mean(nmse, axis=0)
 
 
 # Plots
@@ -82,7 +82,7 @@ plt.title('Normalized Mean Square Error (order: {})'.format(int_order))
 
 # Fig. Average system distance versus angular speed
 plt.figure()
-plt.plot(np.rad2deg(angular_speed), db(ave_nmse))
+plt.plot(np.rad2deg(angular_speed), db(mean_nmse))
 plt.plot([np.rad2deg(Omega_al), np.rad2deg(Omega_al)], [-120, 0], '--')
 plt.xlabel(r'$\Omega$ / rad/s')
 plt.ylabel('System distance / dB')
