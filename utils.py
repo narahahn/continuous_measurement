@@ -672,8 +672,12 @@ def additive_noise(s, snr):
     Es = np.std(s)
     En = np.std(additive_noise)
     return additive_noise / En * Es * 10**(snr/20)
-    
-    
-    
-    
-    
+
+
+def nmse(h, h0, normalize='mean'):
+    """Normalized mean square error between two sets of impulse responses"""
+    if normalize == 'mean':
+        norm_energy = np.mean(np.sum(h0**2, axis=-1))
+    elif normalize == 'each':
+        norm_energy = np.sum(h0**2, axis=-1)
+    return np.sqrt(np.sum((h-h0)**2, axis=-1) / norm_energy)
