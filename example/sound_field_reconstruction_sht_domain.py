@@ -13,10 +13,9 @@ import micarray
 N = 20  # order of modal beamformer/microphone array
 azi_pw = np.pi  # incidence angle of plane wave
 pw_angle = (np.pi, np.pi/3)
-azi_pwd = np.linspace(0, 2*np.pi, 91, endpoint=False)  # angles for plane wave decomposition
-f = 2000
-c = 343
-k = 2 * np.pi * f / c
+f = 2000  # frequency
+c = 343  # speed of sound
+k = 2 * np.pi * f / c  # wave number
 r = 0.25  # radius of array
 
 def dot_product_sph(v, u):
