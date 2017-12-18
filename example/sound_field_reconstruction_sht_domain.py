@@ -1,8 +1,9 @@
 """
-    Sound field reconstruction based on spherical harmonics representations.
-    * compute the sound field of a monochromatic plane wave at discrete points
-    * perform the spherical harmoincs transform of a given order
-    * reconstruct the sound field on the spherical surface
+Sound field reconstruction based on spherical harmonics representations.
+
+* compute the sound field of a monochromatic plane wave at discrete points
+* perform the spherical harmoincs transform of a given order
+* reconstruct the sound field on the spherical surface
 """
 
 import numpy as np
@@ -19,7 +20,7 @@ k = 2 * np.pi * f / c
 r = 0.25  # radius of array
 
 def dot_product_sph(v, u):
-    # evaluate dot-product between u and v in spherical coordinates
+    """Evaluate dot-product between u and v in spherical coordinates."""
     return (np.cos(v[0])*np.sin(v[1])*np.cos(u[0])*np.sin(u[1]) +
             np.sin(v[0])*np.sin(v[1])*np.sin(u[0])*np.sin(u[1]) +
             np.cos(v[1])*np.cos(u[1]))
