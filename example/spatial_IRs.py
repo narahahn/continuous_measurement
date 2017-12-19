@@ -18,7 +18,7 @@ c = 343
 fs = 16000
 
 # Source
-xs = [0, 20, 0]  # Point source
+xs = [0, 2, 0]
 source_type = 'point'
 
 # Receiver
@@ -32,8 +32,7 @@ K = 360  # number of target angles
 # The impulse responses at selected angles
 phi = np.linspace(0, 2 * np.pi, num=K, endpoint=False)
 x = [R*np.cos(phi), R*np.sin(phi), np.zeros_like(phi)]
-#waveform, shift, offset = impulse_response(xs, x, 'point', fs)
-waveform, shift, offset = impulse_response([0, -1, 0], x, 'plane', fs)
+waveform, shift, offset = impulse_response(xs, x, source_type, fs)
 h, _, _ = construct_ir_matrix(waveform, shift, N)
 
 

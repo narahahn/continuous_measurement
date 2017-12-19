@@ -9,6 +9,7 @@ Sound field reconstruction based on spherical harmonics representations.
 import numpy as np
 import matplotlib.pyplot as plt
 import micarray
+from micarray.util import db
 
 N = 20  # order of modal beamformer/microphone array
 azi_pw = np.pi  # incidence angle of plane wave

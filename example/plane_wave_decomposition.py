@@ -70,12 +70,12 @@ H = np.fft.rfft(h, axis=-1)
 
 
 # Modal Beamforming
+bf_order = (K-1) // 2  # beamforming order
 Npwd = 360
 freq = np.linspace(0, fs/2, num=H.shape[-1], endpoint=True)
 k = 2 * np.pi * freq / c
 phi_pwd = np.linspace(0, 2*np.pi, num=Npwd, endpoint=False)
 
-bf_order = (K-1) // 2  # beamforming order
 Bn = micarray.modal.radial.circular_pw(bf_order, k, R, setup='card')
 Dn, _ = micarray.modal.radial.regularize(1/Bn, 3000, 'softclip')
 D = micarray.modal.radial.circ_diagonal_mode_mat(Dn)
