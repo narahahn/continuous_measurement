@@ -20,15 +20,15 @@ c = 343
 fs = 8000
 
 # Source
-xs = [0, 3, 0]
+xs = [0, 3, 3]
 source_type = 'point'
 
 # Excitation
 N = 800  # excitation period
 p = perfect_sequence_randomphase(N)
 
-# Sampling scheme
-max_sht_order = 15
+# Sampling scheme -- Gaussian-like
+max_sht_order = 20
 x, weights = np.polynomial.legendre.leggauss(max_sht_order+1)
 weights *= np.pi / (max_sht_order+1)
 theta = np.arccos(x)
@@ -37,9 +37,9 @@ Q = len(theta)
 M = 2*max_sht_order + 2
 
 # Microphones
-R = 0.5
-Omega = 2*np.pi*fs / (N*M)
-L = int(2*np.pi/Omega*fs)
+R = 0.2
+L = int(N*M)
+Omega = 2*np.pi*fs / L
 t = (1/fs) * np.arange(L)
 phi0 = 0
 phi = Omega*t + phi0
@@ -64,14 +64,15 @@ x, weights = np.polynomial.legendre.leggauss(max_sht_order+1)
 weights *= np.pi / (max_sht_order+1)  # sum(weights)*(2*max_sht_order+2) = 4pi
 elev = np.arccos(x)
 
-# Continuous measurement
+# Continuous system identification
+# (1) Based on CHT for each elevation
 h = np.zeros((Q, M, N))
 max_cht_order = (int(L/N)-1) // 2
 Nf = N // 2 + 1
 freq = np.linspace(0, fs/2, num=Nf, endpoint=True)
 k = 2 * np.pi * freq / c
 Pinv = np.fft.rfft(np.roll(p[::-1], 1))
-for q in range(Q):
+for q in range(Q): # each elevation
     H_cht = np.zeros((Nf, 2*max_cht_order+1)).astype(complex)
     for i in range(N):
         phi_i = phi[i::N]
@@ -85,19 +86,42 @@ for q in range(Q):
     h[q, :, :] = np.fft.irfft(H_q, axis=-1)
 hrs = np.reshape(h, (Q*M, N))
 
+# (2) SHT
+#h2 = np.zeros((Q, M, N))
+max_sht_order = (int(L/N)-1) // 2
+Nf = N // 2 + 1
+freq = np.linspace(0, fs/2, num=Nf, endpoint=True)
+k = 2 * np.pi * freq / c
+Pinv = np.fft.rfft(np.roll(p[::-1], 1))
+H_sht = np.zeros((Nf, (max_sht_order+1)**2)).astype(complex)
+for i in range(N):
+    phi_i = phi[i::N]
+    azi, elev = np.meshgrid(phi_i, theta)
+    s_i = s[:, i::N]
+    azi = np.matrix.flatten(azi)
+    elev = np.matrix.flatten(elev)
+    s_i = np.matrix.flatten(s_i)
+    P_i = Pinv * np.exp(-1j*2*np.pi/N*np.arange(Nf)*i)
+    H_i = P_i[:, np.newaxis] * s_i[np.newaxis, :]
+    Y_i = micarray.modal.angular.sht_matrix(max_sht_order, azi, elev, np.repeat(weights, M, axis=0))
+    H_sht += np.matmul(H_i, np.conj(Y_i.T))
+
+
+
 # Original impulse responses
 azi = np.linspace(0, 2*np.pi, 2*max_sht_order+2, endpoint=False)
 x, weights = np.polynomial.legendre.leggauss(max_sht_order+1)
 elev = np.arccos(x)
 h0 = np.zeros_like(h)
-for i, theta in enumerate(elev):
-    x_k = [R*np.sin(theta)*np.cos(azi), R*np.sin(theta)*np.sin(azi), R*np.cos(theta)*np.ones_like(azi)]
+for i, theta_i in enumerate(elev):
+    x_k = [R*np.sin(theta_i)*np.cos(azi), R*np.sin(theta_i)*np.sin(azi), R*np.cos(theta_i)*np.ones_like(azi)]
     waveform_k, shift_k, offset_k = impulse_response(xs, x_k, source_type, fs)
     htemp, _, _ = construct_ir_matrix(waveform_k, shift_k, N)
 #    H0 = np.fft.rfft(h0, axis=-1)
     h0[i, :, :] = htemp
 h0rs = np.reshape(h0, (Q*M, N))
-    
+
+
 # Evaluating individual impulse responses
 system_distance = nmse(hrs, h0rs, normalize='mean')
 
@@ -120,6 +144,27 @@ S = np.squeeze(np.matmul(Y.T, Hnm[:, np.newaxis]))
 S = np.reshape(S, (K, K))
 S0 = np.squeeze(np.matmul(Y.T, H0nm[:, np.newaxis]))
 S0 = np.reshape(S0, (K, K))
+
+
+# IR reconstruction based on the SHT coefficients
+H2 = np.matmul(H_sht, Y)
+h2 = np.fft.irfft(H2, n=N, axis=0)
+
+
+#azi = np.linspace(0, 2*np.pi, 2*max_sht_order+2, endpoint=False)
+#x, weights = np.polynomial.legendre.leggauss(max_sht_order+1)
+#elev = np.arccos(x)
+h0K = np.zeros((K, K, N))
+for i, theta_i in enumerate(elev):
+    x_k = [R*np.sin(theta_i)*np.cos(azi), R*np.sin(theta_i)*np.sin(azi), R*np.cos(theta_i)*np.ones_like(azi)]
+    waveform_k, shift_k, offset_k = impulse_response(xs, x_k, source_type, fs)
+    htemp, _, _ = construct_ir_matrix(waveform_k, shift_k, N)
+#    H0 = np.fft.rfft(h0, axis=-1)
+    h0K[i, :, :] = htemp
+h0Krs = np.reshape(h0K, (K*K, N)).T
+
+system_distance = nmse(h2.T, h0Krs.T)
+system_distance = np.reshape(system_distance, (K, K))
 
 
 # Plots
@@ -173,3 +218,17 @@ plt.pcolormesh(db(S-S0))
 plt.colorbar(label='dB')
 
 
+plt.figure()
+plt.imshow(db(h0Krs - h2))
+plt.colorbar()
+
+nn = np.random.randint(0, K**2)
+plt.figure()
+plt.plot(db(h0Krs[:, nn]))
+plt.plot(db(h2[:, nn]))
+plt.title('{}'.format(nn))
+
+plt.figure()
+plt.pcolormesh(np.rad2deg(azi), np.rad2deg(elev), db(system_distance), vmax=0)
+plt.colorbar(label='dB')
+plt.gca().invert_yaxis()
