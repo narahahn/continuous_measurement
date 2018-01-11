@@ -35,7 +35,7 @@ R = 0.15
 
 # Gaussian-like sampling scheme
 modal_bandwidth = int(np.ceil(np.exp(1)*np.pi*fs/2*R/c))
-max_sht_order = 30
+max_sht_order = 2
 x, weights = np.polynomial.legendre.leggauss(max_sht_order+1)
 weights *= np.pi / (max_sht_order+1)
 theta = np.arccos(x)
@@ -176,6 +176,19 @@ E00 = np.real(np.matmul(E, np.conj(Y00.T))[0]) / np.sqrt(4*np.pi)
 #    h0K[i, :, :] = htemp
 #h0Krs = np.reshape(h0K, (K*K, N)).T
 
+dirname = 'data_aes144'
+filename = 'msr_N{:04d}_order{:03d}'.format(N, max_sht_order)
+np.savez('{}/{}'.format(dirname,filename),
+         fs=fs, c=c,
+         alpha=alpha, beta=beta,
+         modal_bandwidth=modal_bandwidth, max_sht_order=max_sht_order,
+         oversample_order=oversample_order,
+         R=R, N_theta=N_theta, N_phi=N_phi, theta=theta, phi=phi, L=L, N=N,
+         Omega=Omega, snr=snr,
+         phi_target=phi_target, theta_target=theta_target,
+         Q_theta=Q_theta, Q_phi=Q_phi,
+         h0=h0, h=h, E_matrix=E_matrix, E_mean=E_mean, E00=E00
+         )
 
 
 # Plots
