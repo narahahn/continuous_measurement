@@ -1,5 +1,5 @@
 """
-3D Continuous measurement at discrete elevation angles.
+Plot IRs and TFs of continuous measurement on a sphere at discrete elevations
 
 * point source in a free-field
 * microphones moving on a sphere at discrete elevation angles
