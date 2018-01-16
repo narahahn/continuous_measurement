@@ -10,10 +10,10 @@ Spatial aliasing in continuous measurements
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.signal as signal
-from sys import path
-path.append('../')
 from utils import *
 from source import *
+from sys import path
+path.append('../')
 
 # Constants
 c = 343
@@ -31,11 +31,10 @@ p = perfect_sequence_randomphase(N)
 # Receiver
 R = 0.5
 #Omega = 2 * np.pi / 24
-angular_speed = 2* np.pi / np.arange(5, 24, 3)
+angular_speed = 2 * np.pi / np.arange(5, 24, 3)
 
 # Experimental parameters
 K = 360  # number of target angles
-#Lf = 21  # fractional delay filter length
 int_order = 20  # spatial interpolation order
 Omega_al = c / N / R  # anti-aliasing angular speed
 
@@ -62,9 +61,12 @@ for ii, Omega in enumerate(angular_speed):
     s += additive_noise(s, snr)
 
     # System identification
-    h[:, :, ii] = system_identification(phi, s, phi_k, p, interpolation='lagrange', int_order=int_order)
+    h[:, :, ii] = system_identification(phi, s, phi_k, p,
+                                        interpolation='lagrange',
+                                        int_order=int_order)
 
-nmse = (np.sum((h-h0[:,:,np.newaxis])**2, axis=1) / np.sum(h0**2, axis=1)[:, np.newaxis])**0.5
+nmse = (np.sum((h-h0[:, :, np.newaxis])**2, axis=1) /
+        np.sum(h0**2, axis=1)[:, np.newaxis])**0.5
 mean_nmse = np.mean(nmse, axis=0)
 
 
@@ -74,10 +76,10 @@ mean_nmse = np.mean(nmse, axis=0)
 plt.figure()
 plt.plot(np.rad2deg(phi_k), db(nmse))
 plt.xlim(0, 360)
-#plt.ylim(-120, 0)
 plt.xlabel(r'$\phi$ / $^\circ$')
 plt.ylabel('NMSE / dB')
-plt.legend(np.round(np.rad2deg(angular_speed)).astype(int), loc='best', title='$\Omega$')
+plt.legend(np.round(np.rad2deg(angular_speed)).astype(int),
+           loc='best', title='$\Omega$')
 plt.title('Normalized Mean Square Error (order: {})'.format(int_order))
 
 # Fig. Average system distance versus angular speed
@@ -89,6 +91,3 @@ plt.ylabel('System distance / dB')
 plt.xlim(np.min(np.rad2deg(angular_speed)), np.max(np.rad2deg(angular_speed)))
 plt.ylim(-120, 0)
 plt.title('Mean System Distance (order: {})'.format(int_order))
-
-
-
