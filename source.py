@@ -56,8 +56,9 @@ def greens_point(xs, x, c=343):
     """
     xs = np.array(xs)
     x = np.array(x)
-    if x.shape[1] != 3 & x.shape[0] == 3:
-        x = x.T
+    if x.ndim > 1:
+        if x.shape[1] != 3 & x.shape[0] == 3:
+            x = x.T
     distance = np.linalg.norm(x - xs[np.newaxis, :], axis=-1)
     return distance/c, 1/4/np.pi/distance
 
