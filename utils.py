@@ -519,34 +519,59 @@ def system_identification(phi, s, phi_target, p, interpolation='lagrange', int_o
     y = np.zeros((K, N))
     dphi = 2 * np.pi / L * N
 
-    idx_target = (phi_target - phi[0]) / dphi
-    L_int = int_order + 1
-    idx_int = np.arange(L_int)
-    common_weight = comb(int_order, idx_int) * (-1)**idx_int
-    for n in range(N):
-        if L_int % 2 == 0:
-            idx_first = np.ceil(idx_target - n/N).astype(int)
-            L_half = int(L_int/2)
-        elif L_int % 2 == 1:
-            idx_first = np.round(idx_target - n/N).astype(int)
-            L_half = int((L_int+1)/2)
-        idx = idx_first[:, np.newaxis] + (np.arange(-L_half, -L_half+L_int))[np.newaxis, :]
-        offset = idx_first
-        shift = offset - L_half
-        waveform = common_weight[np.newaxis, :] / (idx_target[:, np.newaxis] - n/N - idx)
-        waveform /= np.sum(waveform, axis=-1)[:, np.newaxis]
-        s_n = s[n::N]
-        is_int = (idx_target-n/N)%1==0
+    if interpolation is 'lagrange':
+        idx_target = (phi_target - phi[0]) / dphi
+        L_int = int_order + 1
+        idx_int = np.arange(L_int)
+        common_weight = comb(int_order, idx_int) * (-1)**idx_int
+        for n in range(N):
+            if L_int % 2 == 0:
+                idx_first = np.ceil(idx_target - n/N).astype(int)
+                L_half = int(L_int/2)
+            elif L_int % 2 == 1:
+                idx_first = np.round(idx_target - n/N).astype(int)
+                L_half = int((L_int+1)/2)
+            idx = idx_first[:, np.newaxis] + (np.arange(-L_half, -L_half+L_int))[np.newaxis, :]
+            offset = idx_first
+            shift = offset - L_half
+            waveform = common_weight[np.newaxis, :] / (idx_target[:, np.newaxis] - n/N - idx)
+            waveform /= np.sum(waveform, axis=-1)[:, np.newaxis]
+            s_n = s[n::N]
+            is_int = (idx_target-n/N)%1==0
+            for k in range(K):
+                if is_int[k]:
+                    y[k, n] = s_n[idx_first[k]]
+                else:
+                    idx_n = np.arange(shift[k], shift[k]+L_int).astype(int)
+                    y[k, n] = np.dot(s_n[np.mod(idx_n, int(L/N))], waveform[k, :])
         for k in range(K):
-            if is_int[k]:
-                y[k, n] = s_n[idx_first[k]]
-            else:
-                idx_n = np.arange(shift[k], shift[k]+L_int).astype(int)
-                y[k, n] = np.dot(s_n[np.mod(idx_n, int(L/N))], waveform[k, :])
-    for k in range(K):
-        h[k, :] = cxcorr(y[k, :], p)
+            h[k, :] = cxcorr(y[k, :], p)
+    elif interpolation is 'cht':
+        h = cht_interpolation(phi, s, phi_target, p)
     return h
 
+def cht_interpolation(phi, s, phi_target, p):
+    L = len(s)
+    K = len(phi_target)
+    N = len(p)
+    y = np.zeros((K, N))
+    h = np.zeros((K, N))
+    dphi = 2 * np.pi * N / L
+    ddphi = 2 * np.pi / L
+
+    max_order = int(np.ceil((L/N - 1) / 2))
+    order = np.roll(np.arange(L/N) - max_order, -max_order)
+    ym = np.zeros((int(L / N), N), dtype='complex')
+
+    for n in range(N):
+        ym[:, n] = np.fft.fft(s[n::N]) * np.exp(-1j * 2 * np.pi * n / L * order)
+    ym *= N / L
+    
+    for k in range(K):
+        y[k, :] = np.real(np.dot(ym.T, np.exp(1j * phi_target[k] * order)))
+    h = np.fft.irfft(np.fft.rfft(y, axis=-1) * np.fft.rfft(np.roll(p[::-1], 1)))
+    return h
+    
 
 def estimate_irs(s, N, idx, order):
     """
