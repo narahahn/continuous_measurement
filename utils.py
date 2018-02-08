@@ -706,3 +706,13 @@ def nmse(h, h0, normalize='mean'):
     elif normalize == 'each':
         norm_energy = np.sum(h0**2, axis=-1)
     return np.sqrt(np.sum((h-h0)**2, axis=-1) / norm_energy)
+
+def next_divisor(n, N):
+    if N < n or n <= 0:
+        raise ValueError('n must be in the range of [1, N]')
+    elif N == n:
+        return 1
+    else:
+        nlist = np.arange(2, np.floor(N / 2) + 1)
+        nlist = nlist[(N / nlist) % 2 == 0]
+        return int([i for i in nlist if i > n][0])
